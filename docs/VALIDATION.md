@@ -2,6 +2,26 @@
 
 Bu kayıt strateji performans raporu değildir.
 
+## v0.2 sürekli aday takibi
+
+Son kontrol: **39 test geçti**; Python derleme ve JavaScript sözdizimi kontrolleri başarılı.
+
+- Kapanmış mum stream'i analizi tetikler; açık mumlar kullanılmaz. İlk REST
+  tarihçe ısınması ve 5 dakikalık mutabakat devam eder.
+- Fiyat güncellemesi geldiğinde geçerli adaylar yeniden kontrol edilir; sıradaki
+  genel tur beklenmez. Funding ve kur istekleri fiyat döngüsünden ayrıldı.
+- Paused → Başlat sonrası mevcut adaydan giriş, fiyat geri gelince yeniden
+  deneme, tek kimlikle tek giriş, süre aşımı, eski funding engeli, mum analizi
+  yarış durumu, stream yeniden aboneliği ve çelişkili mum testleri eklendi.
+- WebSocket aboneliği/yeniden bağlantısı sentetik taşıyıcıyla, arka plan giriş
+  yönetimi sahte piyasa adaptörüyle test edildi. Bu testler Binance canlı
+  bağlantı veya strateji performans doğrulaması değildir.
+- Bulut ortamının bölgesel Binance 451 engeli devam ettiğinden gerçek WebSocket
+  akışı burada doğrulanmadı; kullanıcının Mac'inde bağlantı sayısı, kapanış
+  olayları ve giriş takibi ayrıca gözlemlenmelidir.
+- Araştırma backtest'i henüz v0.2 aday yürütmesiyle eşleştirilmedi; sonuçları
+  bu davranışın doğrulaması sayılamaz. Gerçek emir modu hâlâ yoktur.
+
 ## Sonraki düzeltme: veri yaşı
 
 Mac'te kur ve coin taraması çalışırken en eski coin fiyatının global veri yaşına

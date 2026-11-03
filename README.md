@@ -45,6 +45,7 @@ HTTPS erişimi gerekir:
 
 - `fapi.binance.com`: zaman, sözleşmeler, OHLCV, book ticker, hacim ve funding.
 - `api.binance.com`: yaklaşık TL karşılığı için USDT/TRY spot kuru.
+- `fstream.binance.com`: TLS WebSocket kapanmış mum akışı (443 portu).
 - Kurulum için `pypi.org` ve `files.pythonhosted.org`.
 
 Miras alınan proxy ve CA ayarları korunur; TLS doğrulaması kapatılmaz. Ağ hatasında
@@ -52,12 +53,21 @@ canlı veri doğrulanmış sayılmaz. Binance'in bölgesel kısıtları varsa al
 noktalarla aşılmaz. Kur erişilemezse TL değeri gösterilmez; eski kur etiketlenir.
 USDT/TRY, USD/TRY değildir; panelde TL tutarı yaklaşık değerdir.
 
-Tarama 5 dakikalık UTC sınırlarında yapılır; ilk veri geldiğinde ilk tur başlar.
-En fazla 150 sembol hacme göre sıralanır. Veri istekleri hız sınırlıdır;
-taramanın tamamlanması zaman alır ve ilerleme/hatalar panelde gösterilir.
-Canlı alış/satış fiyatları yaklaşık 2 saniyede bir public REST ile alınır;
-bu sürüm tick-by-tick WebSocket terminali değildir. Mum analizi sadece kapanmış
-mumları kullanır. 1sa/4sa trend; 3/5/15/30dk giriş; günlük bağlam değerlendirilir.
+Genel coin listesi ve REST veri mutabakatı 5 dakikalık döngüde yenilenir;
+bu süre girişler için bir bekleme kilidi değildir. En fazla 150 sembol hacme göre
+sıralanır. İlk çalıştırmada tarihçe ısınması tamamlanmadan ilgili coinde giriş aranmaz.
+Yeni kapanmış mumlar WebSocket ile önbelleğe gelir ve analizi yeniden tetikler.
+Hâlâ oluşmakta olan mumlar kullanılmaz. 1sa/4sa trend; 3/5/15/30dk giriş;
+günlük bağlam değerlendirilir. Bağlantı yenilenince tekrar abone olunur;
+mum boşluğu varsa REST mutabakatı tamamlanmadan o coinin adayı işleme alınmaz.
+
+Geçerli adaylar her yeni REST fiyat güncellemesinde (normal koşullarda yaklaşık
+2 saniye + istek gecikmesi) kontrol edilir. Uygun girişe gelmeyen adaylar süreleri
+bitene veya yeni mum analizi onları geçersiz kılana kadar bekler. Aynı sinyal
+kimliğiyle yeniden giriş yapılmaz. Başlat onayı ve bütün risk kontrolleri korunur.
+Tam tick-by-tick veya sıfır gecikmeli işlem garantisi yoktur. Funding/kur istekleri
+ayrı iş parçacığındadır ve fiyat takibini bekletmez. Panelde mum bağlantısı sayısı
+ve bekleyen aday sayısı görünür. Fiyat güvenlik sınırı yine 15 saniyedir.
 
 Paneli kapatmak ayrı çalışan Python sürecini durdurmaz. Bilgisayar kapanınca
 çalışması için Python sürecinin kalıcı bir sunucuda çalışması gerekir. Bu depo
@@ -96,6 +106,7 @@ DATA_END olarak kapatılır. Gerçek Binance likidasyon motoru modellenmez.
 - `lsa/risk.py`: paper pozisyonlar, maliyetler, günlük ve toplam risk.
 - `lsa/storage.py`, `reporting.py`: SQLite günlüğü ve performans.
 - `lsa/engine.py`: tarama, fiyat izleme, SAFE_MODE ve manuel başlatma.
+- `lsa/stream.py`: kapanmış mum abonelikleri, bağlantı yenileme ve doğrulama.
 - `lsa/web.py`, `lsa/static/`: yerel kontrol paneli.
 - `lsa/history.py`, `backtest.py`: Parquet ve sınırlı araştırma replay'i.
 

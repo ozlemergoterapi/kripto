@@ -4,10 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lsa-trader"
-version = "0.1.0"
+version = "0.2.0"
 description = "Binance USD-M public data paper trading and risk dashboard"
 requires-python = ">=3.12"
-dependencies = ["pyarrow==21.0.0"]
+dependencies = ["pyarrow==21.0.0", "websockets==15.0.1"]
 
 [project.optional-dependencies]
 test = ["pytest==8.4.2"]

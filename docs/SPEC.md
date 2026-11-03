@@ -1,4 +1,4 @@
-# LSA Trader — şartname v0.1
+# LSA Trader — şartname v0.2
 
 Durum: Kullanıcının bu görüşmede onayladığı kapsam için simülasyon geliştirme sürümü.
 Önceki "yalnızca sinyal / Telegram" metninin yerini aşağıdaki kararlar alır.
@@ -18,7 +18,10 @@ Durum: Kullanıcının bu görüşmede onayladığı kapsam için simülasyon ge
 - TP1 1R: %50 çıkış, kalan stopu maliyet karşılayan başabaş seviyesine taşıma.
   TP2 2R: kalan çıkış. Stop ve hedefler ATR/piyasa yapısına göre.
 - Sinyal ömrü azami 10 dakika; pozisyon azami 4 saat.
-- En fazla 150 likit sözleşme; 7/24 veri/pozisyon takibi, her 5 dakika analiz.
+- En fazla 150 likit sözleşme; 7/24 veri/pozisyon takibi. Coin evreni ve REST
+  mutabakatı 5 dakikada bir; giriş adayları her fiyat güncellemesinde kontrol edilir.
+  Yeni kapanmış mumlar WebSocket ile analizi tetikler (kullanıcının sürekli giriş
+  takibi talebi). Mum kapanışı ve risk kuralları değişmez.
 - 15 saniye güncel veri yoksa SAFE_MODE ve çıkış isteği. Eski fiyatla hayali çıkış yok.
 - Yeniden açılışta Başlat onayı gerekir; mevcut paper pozisyonların risk yönetimi sürer.
 - Acil durdur: yeni girişleri durdurur ve tüm pozisyonların kapatılmasını ister.
@@ -62,8 +65,11 @@ Canlı emir verme izni veya kanıtlanmış strateji anlamına gelmez.
 - Stop emirleri bu sürümde simülasyondur. Binance'te gerçek koruyucu emir yoktur.
 - Veri yokken çıkış fiyatı bilinmez; açık pozisyon çıkış bekler. İlk geçerli fiyatta
   çıkış simüle edilir. Bu arada zarar büyüyebilir. Eski değerleme panelde eskilik yaşıyla görünür.
-- Fiyat güncellemesi public REST polling ile yaklaşık 2 saniye; saat senkronizasyonu
-  ve mum boşluğu denetimi vardır. WebSocket bağlantısı sonraki geliştirme konusudur.
+- Fiyat güncellemesi public REST polling ile yaklaşık 2 saniye + ağ gecikmesi;
+  kapanmış mumlar public WebSocket üzerinden alınır. İlk tarihçe, boşluk onarımı
+  ve düzenli veri mutabakatı REST ile yapılır. Süresi dolan, yeni mumla geçersiz
+  kalan ve daha önce işleme girilmiş adaylardan yeni pozisyon açılmaz. Başlat
+  öncesi adaylar saklanabilir ama emir simülasyonu yapılamaz.
 - 150 coin × yedi zaman aralığı tek anda değil, hız bütçesi içinde sırayla taranır.
   Bir coin veya zaman aralığı hatalıysa o coin için yeni işlem yoktur.
 - SQLite ledger her değişimde atomik kaydedilir; process crash'te Başlat durumu geri yüklenmez.
@@ -85,6 +91,8 @@ Canlı emir verme izni veya kanıtlanmış strateji anlamına gelmez.
    gerçek filtreler ve hassas fiyat/miktar yuvarlama ile backtest'i tamamlama.
 3. Gerçek geçmiş veriyle walk-forward, holdout ve maliyet stresi; 300 işlem ve
    tüm kabul eşikleri. Şu anda hiçbir getiri/doğruluk sonucu üretilmedi.
+   Araştırma replay'i henüz v0.2 sürekli aday denemelerini modellemiyor; eski
+   replay sonuçları bu yürütme davranışını doğrulamaz.
 4. Binance testnet emir adaptörü, idempotent client order IDs, emir/pozisyon mutabakatı,
    reduce-only çıkışlar, exchange-side stoplar, funding ve likidasyon doğrulaması.
 5. Sürekli sunucu, kimlik doğrulama/TLS, süreç gözetimi, yedekleme ve kesinti testleri.

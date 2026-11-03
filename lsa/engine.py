@@ -5,6 +5,7 @@ from dataclasses import asdict
 
 from .indicators import returns
 from .market import BinancePublic, MarketError
+from .market import INTERVAL_MS
 from .reporting import metrics, reports
 from .risk import PaperBook
 from .strategy import analyze
@@ -34,6 +35,13 @@ class Engine:
         self.latest_candidates = []
         self.threads = []
         self.funding_checked_at = 0.0
+        self.frames = {}
+        self.frame_versions = {}
+        self.dirty_symbols = set()
+        self.pending_signals = {}
+        self.entered_ids = {f["signal_id"] for f in self.book.fills if f["reason"] == "ENTRY"}
+        from .stream import ClosedCandleStreams
+        self.streams = ClosedCandleStreams(self)
         self.event("INFO", "SİMÜLASYON açıldı; gerçek emir özelliği bulunmuyor. Başlat onayı bekleniyor.")
 
     def event(self, level, message):
@@ -41,7 +49,8 @@ class Engine:
         self.store.event(time.time(), level, message)
 
     def start_workers(self):
-        for target in (self._quotes_loop, self._scan_loop, self._watchdog_loop):
+        self.streams.start()
+        for target in (self._quotes_loop, self._scan_loop, self._watchdog_loop, self._analysis_loop, self._maintenance_loop):
             t = threading.Thread(target=target, daemon=True)
             t.start()
             self.threads.append(t)
@@ -51,7 +60,7 @@ class Engine:
         with self.lock:
             self.running = False
             self.store.save(self.book)
-        for thread in self.threads:
+        for thread in self.threads + self.streams.threads:
             thread.join(timeout=8)
 
     def control(self, action):
@@ -114,7 +123,112 @@ class Engine:
                 self.book.manage(good, now)
                 self.book.enforce_daily(good, now)
                 self.safe_reason = "" if not self.pending_exit else "Çıkış bekleniyor"
+                self._evaluate_pending(now)
             self.store.save(self.book)
+
+    def cache_snapshot(self, symbol, frames):
+        """Merge REST warmup with any newer stream candles received during download."""
+        with self.lock:
+            cached = self.frames.setdefault(symbol, {})
+            for tf, bars in frames.items():
+                merged = {b.open_time: b for b in bars}
+                merged.update({b.open_time: b for b in cached.get(tf, [])})
+                cached[tf] = [merged[k] for k in sorted(merged)][-260:]
+            self.frame_versions[symbol] = self.frame_versions.get(symbol, 0) + 1
+            self.dirty_symbols.add(symbol)
+
+    def on_closed_candle(self, symbol, tf, candle):
+        with self.lock:
+            if symbol not in self.universe or tf not in self.config.timeframes:
+                return
+            bars = self.frames.setdefault(symbol, {}).setdefault(tf, [])
+            duplicate = next((b for b in bars if b.open_time == candle.open_time), None)
+            if duplicate is not None:
+                if duplicate != candle:
+                    self.frames[symbol] = {}
+                    self.frame_versions[symbol] = self.frame_versions.get(symbol, 0) + 1
+                    self.dirty_symbols.add(symbol)
+                    self.event("ERROR", f"{symbol}: çelişen kapanmış mum; REST mutabakatı bekleniyor.")
+                return
+            bars.append(candle)
+            bars.sort(key=lambda b: b.open_time)
+            del bars[:-260]
+            self.frame_versions[symbol] = self.frame_versions.get(symbol, 0) + 1
+            self.dirty_symbols.add(symbol)
+
+    def _analyze_cached(self, symbol, now):
+        with self.lock:
+            frames = {tf: list(bars) for tf, bars in self.frames.get(symbol, {}).items()}
+            revision = self.frame_versions.get(symbol, 0)
+        signal = analyze(symbol, frames, now, self.config)
+        with self.lock:
+            if revision != self.frame_versions.get(symbol, 0):
+                self.dirty_symbols.add(symbol)
+                return
+            # A new closed-bar decision supersedes the previous pending plan.
+            for id in [k for k, v in self.pending_signals.items() if v["signal"].symbol == symbol
+                       and (signal is None or k != signal.id)]:
+                del self.pending_signals[id]
+            if signal is None or signal.id in self.entered_ids:
+                return
+            if signal.id not in self.pending_signals:
+                self.pending_signals[signal.id] = {"signal": signal, "returns": returns(frames["15m"]),
+                                                   "attempted_at": None, "last_reason": None,
+                                                   "revision": revision}
+                self.latest_candidates = [c for c in self.latest_candidates if c["symbol"] != symbol]
+                self.latest_candidates.append(signal.record())
+                self.store.save(self.book, [signal])
+                self.event("INFO", f"{symbol} {signal.side}: giriş adayı canlı fiyat takibine alındı.")
+            else:
+                self.pending_signals[signal.id]["revision"] = revision
+                self.pending_signals[signal.id]["returns"] = returns(frames["15m"])
+
+    def _analysis_loop(self):
+        while not self.stop_event.wait(.25):
+            with self.lock:
+                dirty = sorted(self.dirty_symbols)
+                self.dirty_symbols.clear()
+            for symbol in dirty:
+                try:
+                    self._analyze_cached(symbol, time.time())
+                except Exception:
+                    log.exception("Cached analysis failed: %s", symbol)
+                    with self.lock:
+                        for id in [k for k, v in self.pending_signals.items() if v["signal"].symbol == symbol]:
+                            del self.pending_signals[id]
+                    self.event("ERROR", f"{symbol}: canlı mum analizi başarısız; aday iptal edildi.")
+
+    def _evaluate_pending(self, now):
+        # Called under the account lock after exits and equity/daily checks.
+        for id, item in list(self.pending_signals.items()):
+            signal = item["signal"]
+            if now > signal.expires_at or id in self.entered_ids or signal.symbol not in self.universe:
+                del self.pending_signals[id]
+                continue
+            if not self.running or self.safe_reason or self.pending_exit or self.book.daily_locked:
+                continue
+            if now - self.funding_checked_at >= 60:
+                continue
+            frames = self.frames.get(signal.symbol, {})
+            if item["revision"] != self.frame_versions.get(signal.symbol, 0):
+                continue
+            if any(not frames.get(tf) or now * 1000 - frames[tf][-1].close_time > INTERVAL_MS[tf] + 15000
+                   or any(b.open_time - a.open_time != INTERVAL_MS[tf] for a, b in zip(frames[tf], frames[tf][1:]))
+                   for tf in self.config.timeframes):
+                continue
+            q = self.quotes.get(signal.symbol)
+            if not q or item["attempted_at"] == q.observed_at:
+                continue
+            item["attempted_at"] = q.observed_at
+            reason = self.book.open(signal, q, now, self.universe[signal.symbol]["filters"], item["returns"])
+            if reason is None:
+                self.entered_ids.add(id)
+                del self.pending_signals[id]
+                self.book.enforce_daily(self.quotes, now)
+                self.event("INFO", f"{signal.symbol} {signal.side}: canlı fiyat koşullarıyla SİMÜLASYON açıldı.")
+            elif reason != item["last_reason"]:
+                self.event("INFO", f"{signal.symbol}: giriş bekliyor — {reason}")
+                item["last_reason"] = reason
 
     def check_stale(self, now):
         with self.lock:
@@ -153,32 +267,15 @@ class Engine:
         self.funding_checked_at = now
 
     def _quotes_loop(self):
-        clock_at = rate_at = 0.0
         retry_delay = 2
         while not self.stop_event.is_set():
             try:
                 now = time.time()
-                if now - clock_at >= 300:
+                if self.market.clock_offset is None:
                     self.market.sync_clock()
-                    clock_at = time.time()
                 self.ingest(self.market.quotes(), time.time())
                 self.error = None
                 retry_delay = 2
-                if now - self.funding_checked_at > 30:
-                    try:
-                        self._funding()
-                    except Exception:
-                        with self.lock:
-                            self._trip("SAFE_MODE: funding maliyeti doğrulanamadı; çıkış bekleniyor")
-                        raise
-                if now - rate_at > 60:
-                    rate_at = now
-                    try:
-                        rate = self.market.try_rate()
-                        with self.lock:
-                            self.rate, self.rate_error = rate, None
-                    except MarketError as e:
-                        self.rate_error = str(e)
             except Exception as e:
                 # Do not hide an unexpected programming error behind a healthy status.
                 message = str(e) if isinstance(e, MarketError) else f"Beklenmeyen hata: {type(e).__name__}"
@@ -195,6 +292,36 @@ class Engine:
                 self.check_stale(time.time())
                 retry_delay = min(30, retry_delay * 2)
             self.stop_event.wait(retry_delay)
+
+    def _maintenance_loop(self):
+        # Funding / FX network calls must not block the price-management loop.
+        clock_at = rate_at = 0.0
+        while not self.stop_event.wait(1):
+            now = time.time()
+            try:
+                if now - self.funding_checked_at > 30:
+                    try:
+                        self._funding()
+                    except Exception:
+                        with self.lock:
+                            self._trip("SAFE_MODE: funding maliyeti doğrulanamadı; çıkış bekleniyor")
+                        raise
+                if now - clock_at > 300 and self.market.clock_offset is not None:
+                    self.market.sync_clock()
+                    clock_at = now
+                if now - rate_at > 60:
+                    rate_at = now
+                    try:
+                        rate = self.market.try_rate()
+                        with self.lock:
+                            self.rate, self.rate_error = rate, None
+                    except MarketError as e:
+                        self.rate_error = str(e)
+            except Exception as e:
+                log.exception("Maintenance failed")
+                with self.lock:
+                    self._trip(f"SAFE_MODE: bakım verisi doğrulanamadı ({type(e).__name__})")
+                self.stop_event.wait(5)
 
     def _scan_loop(self):
         next_scan = 0
@@ -227,19 +354,7 @@ class Engine:
                                 break
                         if self.stop_event.is_set():
                             break
-                        signal = analyze(symbol, frames, time.time(), self.config)
-                        if signal:
-                            with self.lock:
-                                self.latest_candidates.append(signal.record())
-                                if not self.store.signal_exists(signal.id):
-                                    reason = "İşlemler kullanıcı tarafından başlatılmadı"
-                                    q = self.quotes.get(symbol)
-                                    if (self.running and not self.safe_reason and q and
-                                            time.time() - self.funding_checked_at < 60):
-                                        reason = self.book.open(signal, q, time.time(), metadata["filters"], returns(frames["15m"]))
-                                    self.store.save(self.book, [signal])
-                                    self.event("INFO", f"{symbol} {signal.side} {signal.score}/100: " +
-                                               (reason or "SİMÜLASYON pozisyonu açıldı"))
+                        self.cache_snapshot(symbol, frames)
                     except Exception as e:
                         with self.lock:
                             self.scan["errors"] += 1
@@ -279,6 +394,10 @@ class Engine:
                     "closed": [asdict(p) for p in reversed(self.book.closed[-100:])],
                     "metrics": metrics(self.book.closed, self.book.max_drawdown),
                     "reports": reports(self.book), "scan": dict(self.scan),
-                    "universe_size": len(self.universe), "candidates": self.latest_candidates[-30:],
+                    "universe_size": len(self.universe),
+                    "candidates": [v["signal"].record() for v in self.pending_signals.values()
+                                   if v["signal"].expires_at >= now][-30:],
+                    "entry_monitor": {"pending": len(self.pending_signals), "price_poll_seconds": 2,
+                                      "candles": self.streams.status()},
                     "events": self.store.events(), "config": asdict(self.config),
                     "config_hash": self.config.fingerprint, "server_time": now}

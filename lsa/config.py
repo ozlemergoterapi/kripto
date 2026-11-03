@@ -5,7 +5,7 @@ import json
 
 @dataclass(frozen=True)
 class Config:
-    version: str = "0.1.0-paper"
+    version: str = "0.2.0-paper"
     initial_balance: float = 100.0
     trade_risk: float = 0.02
     portfolio_risk: float = 0.04
