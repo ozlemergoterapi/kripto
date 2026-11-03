@@ -147,3 +147,23 @@ Bayrak/flama, üçgen/kama, ikili/üçlü tepe-dip, OBO/TOBO, çanak ve fincan-k
 şablonları vardır. Harmonik Fibonacci oranları, tekil mum formasyonları, hacimle
 kırılım doğrulaması bu karşılaştırmanın kapsamında değildir. Modül sadece
 açıklamadır; mevcut strateji, puanlama ve risk kurallarını etkilemez.
+
+## Açık pozisyonun canlı grafiği
+
+Pozisyon satırında **Canlı grafik** düğmesi vardır. Grafik panelindeki **Canlı
+grafik / Giriş anı** sekmeleri güncel takip ile sabit giriş kaydı arasında geçer.
+Yeni pozisyonlarda otomatik açılan görünüm artık canlı grafiktir. Eski sürümlerde
+açılmış ve giriş görüntüsü bulunmayan açık pozisyonlar da canlı takip edilebilir;
+giriş kaydı sonradan oluşturulmaz.
+
+Canlı grafik paneli yaklaşık saniyede bir yenilenir. Fiyat public REST üzerinden
+yaklaşık 2 saniye + ağ gecikmesiyle; oluşan mum WebSocket üzerinden güncellenir.
+Son mum kapanmamışsa açıkça belirtilir. **Açık mum yalnızca çizilir, analiz motoruna
+verilmez.** Formasyon karşılaştırması da yalnızca kapanmış mumlardan hesaplanır.
+Fiyat, güncel taşınmış stop, TP seviyeleri ve kalan teminat/tutar gösterilir.
+Mum ve fiyat akışlarının eskiliği ayrı etiketlenir; veri yoksa yeni veri uydurulmaz.
+
+Yeniden açılışta tarihçe hazırlanırken bekleme mesajı görülür. Açık pozisyonlar
+coin listesi dışına çıksa da mum aboneliklerinde ve REST ısınmasında tutulur.
+Grafik kapatılınca veya pozisyon kapanınca canlı grafik sorguları durur; botun
+risk takibi bundan bağımsız sürer. Canlı görüntü SQLite giriş kaydını değiştirmez.

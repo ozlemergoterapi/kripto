@@ -2,6 +2,21 @@
 
 Bu kayıt strateji performans raporu değildir.
 
+## Canlı pozisyon grafiği
+
+- Açık mum görüntü verisi analiz önbelleğinden ayrıldı. Yeni mum/quote ve güncel
+  stop ayrı canlı endpoint'ten okunur; sabit giriş kaydı korunur. Coin evreni
+  dışında kalan açık pozisyonlar da abonelik ve ısınmaya dahil edildi.
+- Açık mum izolasyonu, olay sırası, gecikmiş kapanış, eskilik etiketleri, eksik
+  tarihçe, taşınan stop, pozisyon kapanışı, HTTP erişimi ve abonelik kapsamı
+  testleri eklendi. Son toplam **70 test geçti**.
+- Chromium'da yalnızca geçici sentetik veriyle canlı SVG'nin değişmesi, giriş
+  SVG'sinin sabit kalması, sekme geçişi, mum etiketi, panel kapanınca polling'in
+  durması ve pozisyon kapandıktan sonra polling'in durması doğrulandı. Masaüstü
+  ve mobil taşma yok; JavaScript exception yok. Testler kullanıcının günlüğüne
+  veya gerçek hesabına yazmadı. Gerçek Binance WebSocket bağlantısının Mac'teki
+  doğrulaması bu yerel tarayıcı testlerinin kapsamı değildir.
+
 ## Giriş grafikleri ve açıklayıcı şablon karşılaştırması
 
 - Toplam **62 test geçti**. 17 formasyon için sentetik şablon, fiyat ölçeği

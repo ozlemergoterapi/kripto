@@ -32,10 +32,16 @@ def make_server(engine, host="127.0.0.1", port=8765):
                 self.reply(200, {"token": token})
             elif self.path == "/health":
                 self.reply(200, {"service": "ok", "mode": "paper", "strategy_validated": False})
-            elif self.path.startswith("/api/entry-chart/"):
-                id = self.path[len("/api/entry-chart/"):]
+            elif self.path.startswith(("/api/entry-chart/","/api/live-chart/")):
+                live=self.path.startswith("/api/live-chart/")
+                prefix="/api/live-chart/" if live else "/api/entry-chart/"
+                id = self.path[len(prefix):]
                 if not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", id):
                     self.reply(400, {"error":"Geçersiz grafik kimliği"})
+                    return
+                if live:
+                    status,chart=engine.live_chart(id)
+                    self.reply(status,chart)
                     return
                 chart = engine.store.entry_chart(id)
                 self.reply(200 if chart else 404, chart or {"error":"Bu pozisyonun giriş anı grafiği kaydedilmemiş. Geçmişe dönük grafik üretilmez."})

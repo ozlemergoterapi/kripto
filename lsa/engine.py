@@ -37,6 +37,8 @@ class Engine:
         self.threads = []
         self.funding_checked_at = 0.0
         self.frames = {}
+        self.forming_candles = {}
+        self.chart_event_times = {}
         self.frame_versions = {}
         self.dirty_symbols = set()
         self.pending_signals = {}
@@ -145,7 +147,7 @@ class Engine:
 
     def on_closed_candle(self, symbol, tf, candle):
         with self.lock:
-            if symbol not in self.universe or tf not in self.config.timeframes:
+            if (symbol not in self.universe and symbol not in self.book.positions) or tf not in self.config.timeframes:
                 return
             bars = self.frames.setdefault(symbol, {}).setdefault(tf, [])
             duplicate = next((b for b in bars if b.open_time == candle.open_time), None)
@@ -161,6 +163,43 @@ class Engine:
             del bars[:-260]
             self.frame_versions[symbol] = self.frame_versions.get(symbol, 0) + 1
             self.dirty_symbols.add(symbol)
+
+    def on_kline(self, symbol, tf, candle, closed, event_at):
+        with self.lock:
+            if (symbol not in self.universe and symbol not in self.book.positions) or tf not in self.config.timeframes:
+                return
+            key=(symbol,tf)
+            observed=event_at-(self.market.clock_offset or 0)
+            if not closed and observed < self.chart_event_times.get(key,0):
+                return
+            if closed:
+                self.chart_event_times[key]=max(observed,self.chart_event_times.get(key,0))
+                self.on_closed_candle(symbol,tf,candle)
+                current=self.forming_candles.get(key)
+                if current and current.open_time <= candle.open_time:
+                    self.forming_candles.pop(key,None)
+            else:
+                bars=self.frames.get(symbol,{}).get(tf,[])
+                if bars and candle.open_time <= bars[-1].open_time:
+                    return
+                self.chart_event_times[key]=observed
+                self.forming_candles[key]=candle
+
+    def live_chart(self, id, now=None):
+        from .charts import live_snapshot
+        with self.lock:
+            position=next((p for p in self.book.positions.values() if p.id==id),None)
+            if position is None:
+                return (410 if any(p.id==id for p in self.book.closed) else 404), {"error":"Pozisyon kapandı; canlı takip durdu." if any(p.id==id for p in self.book.closed) else "Pozisyon bulunamadı."}
+            now=time.time() if now is None else now
+            key=(position.symbol,position.timeframe)
+            bars=[c for c in self.frames.get(position.symbol,{}).get(position.timeframe,[])
+                  if c.valid() and c.close_time<now*1000]
+            if len(bars)<2:
+                return 503,{"error":"Canlı grafik tarihçesi hazırlanıyor. Geçerli mum verisi bekleniyor.","retry":True}
+            return 200,live_snapshot(position,bars,self.forming_candles.get(key),
+                                     self.quotes.get(position.symbol),now,
+                                     self.chart_event_times.get(key),self.config.stale_seconds)
 
     def _analyze_cached(self, symbol, now):
         with self.lock:
@@ -353,9 +392,10 @@ class Engine:
                 universe = self.market.universe(quotes)
                 with self.lock:
                     self.universe = universe
-                    self.scan = {"at": started, "done": 0, "total": len(universe), "errors": 0, "active": True}
+                    scan_symbols=list(self.book.positions)+[s for s in universe if s not in self.book.positions]
+                    self.scan = {"at": started, "done": 0, "total": len(scan_symbols), "errors": 0, "active": True}
                     self.latest_candidates = []
-                for symbol, metadata in universe.items():
+                for symbol in scan_symbols:
                     if self.stop_event.is_set():
                         break
                     try:

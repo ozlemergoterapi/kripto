@@ -140,7 +140,7 @@ def test_stream_reconnects_and_resubscribes_without_exceeding_limits(tmp_path,co
     e.streams._run(0)
     assert len(calls)==2
     assert calls[0][0].startswith("wss://")
-    assert len(subscriptions[0]["params"]) == 350
+    assert len(subscriptions[0]["params"]) == 420
     assert subscriptions[0]["method"] == "SUBSCRIBE"
     assert e.frames["BTCUSDT"]["3m"][-1] == bar
 

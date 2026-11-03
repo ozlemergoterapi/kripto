@@ -3,6 +3,7 @@ import json
 import logging
 import threading
 import time
+from math import isfinite
 
 from .market import INTERVAL_MS
 from .models import Candle
@@ -10,24 +11,33 @@ from .models import Candle
 log = logging.getLogger(__name__)
 
 
-def closed_event(message, now):
+def kline_event(message, now):
     data = message.get("data", message)
     if data.get("e") != "kline":
         return None
     k = data.get("k", {})
-    if k.get("x") is not True or k.get("i") not in INTERVAL_MS:
+    if type(k.get("x")) is not bool or k.get("i") not in INTERVAL_MS:
         return None
     candle = Candle(int(k["t"]), int(k["T"]), float(k["o"]), float(k["h"]),
                     float(k["l"]), float(k["c"]), float(k["v"]))
-    if not candle.valid() or candle.close_time >= now * 1000:
+    closed = k["x"]
+    if not candle.valid() or candle.open_time > now*1000+5000 or (closed and candle.close_time >= now * 1000):
         raise ValueError("Geçersiz veya henüz kapanmamış stream mumu")
     if candle.close_time - candle.open_time + 1 != INTERVAL_MS[k["i"]]:
         raise ValueError("Stream mum süresi geçersiz")
-    return data["s"], k["i"], candle
+    event_at=float(data.get("E",0))/1000
+    if not isfinite(event_at) or event_at<0 or event_at>now+5:
+        raise ValueError("Stream olay zamanı geçersiz")
+    return data["s"], k["i"], candle, closed, event_at
+
+
+def closed_event(message, now):
+    event = kline_event(message, now)
+    return event[:3] if event and event[3] else None
 
 
 class ClosedCandleStreams:
-    """Three bounded connections, each <=350 subscriptions; automatic resubscribe."""
+    """Three bounded connections, each <=420 subscriptions; automatic resubscribe."""
     def __init__(self, engine):
         self.engine = engine
         self.states = {}
@@ -41,7 +51,8 @@ class ClosedCandleStreams:
 
     def _symbols(self, index):
         with self.engine.lock:
-            return tuple(sorted(self.engine.universe)[index * 50:(index + 1) * 50])
+            symbols = set(self.engine.universe) | set(self.engine.book.positions)
+            return tuple(sorted(symbols)[index * 60:(index + 1) * 60])
 
     def _run(self, index):
         from websockets.sync.client import connect
@@ -65,9 +76,9 @@ class ClosedCandleStreams:
                         message = json.loads(raw)
                         if "code" in message:
                             raise ValueError("Binance stream aboneliği reddedildi")
-                        event = closed_event(message, time.time())
+                        event = kline_event(message, time.time())
                         if event:
-                            self.engine.on_closed_candle(*event)
+                            self.engine.on_kline(*event)
             except Exception as e:
                 self.states[index] = "disconnected"
                 log.warning("Closed-candle stream: %s", type(e).__name__)
