@@ -7,6 +7,19 @@ Strateji doğrulanmış değildir; herhangi bir kârlılık iddiası yoktur.
 
 ## Başlatma
 
+### Mac'te kolay başlatma
+
+Python 3.12 veya 3.13 kurulu olmalıdır. GitHub ZIP dosyasını açın ve
+`Mac-Baslat.command` dosyasını çalıştırın. İzin sorunu yaşarsanız Terminal'e
+`bash ` yazıp dosyayı Terminal'e sürükleyin ve Enter'a basın.
+İlk çalıştırmada bağımlılıklar `.venv-mac/` içine yüklenir, ardından yerel panel
+tarayıcıda açılır. Terminal penceresi açık kalmalıdır; Ctrl+C botu durdurur.
+Yeni işlemler yine panelde Başlat onayını bekler. Tarayıcıda Binance'e erişmek,
+Python'un tüm fiyat/mum uç noktalarına erişimini tek başına kanıtlamaz;
+panelde veri yaşı ve tarama ilerlemesini kontrol edin.
+
+### Komut satırı
+
 Python 3.12 veya üstü gerekir. Depo kökünde:
 
 ```bash
