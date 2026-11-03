@@ -96,3 +96,34 @@ def test_old_prices_cannot_be_refreshed_by_receipt_time(tmp_path,config,quote):
     e.ingest({quote.symbol:quote},NOW+20)
     assert e.last_data == 0
     assert e.safe_reason
+
+
+@pytest.mark.parametrize("side", ["LONG", "SHORT"])
+def test_capital_display_tracks_partial_exit_restart_and_history(tmp_path,config,signal,quote,filters,side):
+    store = Store(tmp_path/"journal.sqlite")
+    e = Engine(config,store)
+    e.ingest({quote.symbol:quote},NOW)
+    if side == "SHORT":
+        signal = replace(signal,side="SHORT",stop=102,tp1=98,tp2=96)
+    assert e.book.open(signal,quote,NOW,filters,{}) is None
+    initial = e.view()["positions"][0]
+    assert initial["entry_notional_usdt"] == pytest.approx(initial["initial_margin_usdt"] * initial["leverage"])
+    assert initial["used_margin_usdt"] == initial["initial_margin_usdt"]
+    target = signal.tp1
+    q = replace(quote,bid=target if side=="LONG" else target-.02,
+                ask=target+.02 if side=="LONG" else target,observed_at=NOW+1)
+    e.ingest({quote.symbol:q},NOW+1)
+    partial = e.view()["positions"][0]
+    assert partial["used_margin_usdt"] == pytest.approx(initial["initial_margin_usdt"]/2)
+    assert partial["remaining_notional_usdt"] == pytest.approx(initial["entry_notional_usdt"]/2)
+    assert partial["entry_notional_usdt"] == initial["entry_notional_usdt"]
+    restored = Engine(config,store)
+    assert restored.view()["used_margin_usdt"] == pytest.approx(partial["used_margin_usdt"])
+    target = signal.tp2
+    q = replace(q,bid=target if side=="LONG" else target-.02,
+                ask=target+.02 if side=="LONG" else target,observed_at=NOW+2)
+    restored.ingest({quote.symbol:q},NOW+2)
+    final = restored.view()
+    assert final["used_margin_usdt"] == 0
+    assert final["closed"][0]["initial_margin_usdt"] == initial["initial_margin_usdt"]
+    assert final["closed"][0]["entry_notional_usdt"] == initial["entry_notional_usdt"]

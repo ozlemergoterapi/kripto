@@ -39,6 +39,13 @@ class Position:
     def direction(self):
         return 1 if self.side == "LONG" else -1
 
+    def capital_summary(self):
+        """Entry-price amounts; margin is collateral, not loss or current valuation."""
+        return {"entry_notional_usdt": self.entry * self.quantity,
+                "remaining_notional_usdt": self.entry * self.remaining,
+                "initial_margin_usdt": self.margin,
+                "used_margin_usdt": self.margin * self.remaining / self.quantity}
+
 
 class PaperBook:
     def __init__(self, config, saved=None):

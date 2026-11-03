@@ -112,3 +112,14 @@ DATA_END olarak kapatılır. Gerçek Binance likidasyon motoru modellenmez.
 
 Strateji/konfigürasyon hash'i sinyallerde, SQLite'ta ve panelde saklanır.
 Otomatik parametre optimizasyonu veya kendiliğinden kural değişikliği yoktur.
+
+## Pozisyonlarda USDT tutarları
+
+Açık pozisyonlarda coin adının yanında **Teminat (USDT)** ve **Pozisyon tutarı
+(USDT)** gösterilir. Örneğin 6× kaldıraçlı 180 USDT pozisyon, 30 USDT teminat
+kullanır. Bu tutarlar zarar sınırı değildir; stop riski ayrı hesaplanır.
+Pozisyon tutarı giriş fiyatı × kalan miktardır, güncel fiyatla değerleme değildir.
+TP1 sonrası kalan teminat ve tutar azalır; ilk giriş rakamları alt satırda korunur.
+Komisyonlar teminat sütununa dahil değildir. Toplam kullanılan teminat üst kartta,
+ilk giriş teminatı ve tutarı kapanan işlemler tablosunda da görünür. Bu alanlar
+mevcut kayıtlardan hesaplanır; veritabanı sıfırlaması veya strateji değişikliği yoktur.

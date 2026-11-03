@@ -2,6 +2,14 @@
 
 Bu kayıt strateji performans raporu değildir.
 
+## Pozisyon tutarı gösterimi
+
+Açık pozisyonlarda ilk/kalan teminat ve giriş fiyatıyla ilk/kalan pozisyon
+büyüklüğü USDT olarak eklendi. Kapanan işlem geçmişinde ilk tutarlar korunur.
+LONG ve SHORT için gerçek paper kısmi çıkış → SQLite geri yükleme → kapanış
+akışında tutarların korunması test edildi. Toplam **41 test geçti**; JavaScript
+sözdizimi kontrolü başarılı. Bu değişiklik risk hesaplarını ve stratejiyi değiştirmez.
+
 ## v0.2 sürekli aday takibi
 
 Son kontrol: **39 test geçti**; Python derleme ve JavaScript sözdizimi kontrolleri başarılı.

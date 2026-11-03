@@ -385,13 +385,14 @@ class Engine:
                     "daily_pnl": equity - self.book.daily_base,
                     "daily_loss_limit": self.book.daily_base * self.config.daily_loss,
                     "daily_locked": self.book.daily_locked, "open_risk": self.book.open_risk(),
+                    "used_margin_usdt": sum(p.capital_summary()["used_margin_usdt"] for p in self.book.positions.values()),
                     "rate": self.rate, "rate_error": self.rate_error,
                     "rate_stale": not self.rate or now - self.rate["at"] > 180,
-                    "positions": [asdict(p) | {"quote": asdict(q) if (q := self.quotes.get(p.symbol)) else None,
+                    "positions": [asdict(p) | p.capital_summary() | {"quote": asdict(q) if (q := self.quotes.get(p.symbol)) else None,
                                                "net_if_closed": (p.net + p.direction * (self.book.exit_price(p, q) - p.entry) * p.remaining
                                                                  - self.book.exit_price(p, q) * p.remaining * self.config.fee) if q else None}
                                   for p in self.book.positions.values()],
-                    "closed": [asdict(p) for p in reversed(self.book.closed[-100:])],
+                    "closed": [asdict(p) | p.capital_summary() for p in reversed(self.book.closed[-100:])],
                     "metrics": metrics(self.book.closed, self.book.max_drawdown),
                     "reports": reports(self.book), "scan": dict(self.scan),
                     "universe_size": len(self.universe),
