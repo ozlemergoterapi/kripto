@@ -26,6 +26,8 @@ function render(s) {
   $("daily-pnl").className = "value " + (s.daily_pnl >= 0 ? "green" : "red");
   $("daily-limit").textContent = `${money(s.daily_loss_limit)} USDT`;
   $("position-count").textContent = s.positions.length;
+  $("position-limit").textContent = ` / ${s.config.max_positions}`;
+  $("initial-balance").textContent = `${money(s.initial_balance)} USDT`;
   $("margin-used").textContent = `Kullanılan teminat: ${money(s.used_margin_usdt)} USDT`;
   $("open-risk").textContent = `${money(s.open_risk)} USDT`;
   $("universe").innerHTML = `${s.universe_size}<small> / 150</small>`;

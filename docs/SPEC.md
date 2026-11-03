@@ -1,4 +1,4 @@
-# LSA Trader — şartname v0.2
+# LSA Trader — şartname v0.3
 
 Durum: Kullanıcının bu görüşmede onayladığı kapsam için simülasyon geliştirme sürümü.
 Önceki "yalnızca sinyal / Telegram" metninin yerini aşağıdaki kararlar alır.
@@ -8,8 +8,9 @@ Durum: Kullanıcının bu görüşmede onayladığı kapsam için simülasyon ge
 - Nihai hedef Binance otomatik işlem; ilk sürüm yalnızca gerçek veriyle paper işlem.
   Gerçek para ayrıca açık onay, ayrı emir adaptörü ve testnet doğrulaması gerektirir.
 - Binance USDⓈ-M; USDT teminatlı PERPETUAL. LONG ve SHORT.
-- Başlangıç 100 USDT; tek işlem azami %2, toplam açık risk azami %4.
-- En fazla 3 eşzamanlı pozisyon; azami 10×; yalnızca izole teminat modeli.
+- Kullanıcının yeni onayıyla temiz simülasyon başlangıcı 1.000 USDT;
+  tek işlem azami %2, toplam açık risk azami %4.
+- En fazla 5 eşzamanlı pozisyon; azami 10×; yalnızca izole teminat modeli.
 - Gün başı varlığına göre günlük %6 kayıpta tüm pozisyonlardan çıkış ve yeni giriş kilidi.
   Açık P&L ve maliyetler dahildir. Ani fiyat hareketlerinde sınır aşılabilir.
 - Türkiye saatiyle 00.00 yeni günlük baz; günlük ve haftalık kayıtlar.
@@ -54,8 +55,9 @@ Canlı emir verme izni veya kanıtlanmış strateji anlamına gelmez.
   korelasyonu >= 0,80 ise giriş reddedilir; 48 ortak örnek yoksa da reddedilir.
 - Pozisyon miktarı stop, komisyon ve varsayılan stop slippage'ıyla hesaplanır.
   Borsa LOT_SIZE ve MIN_NOTIONAL filtreleri giriş ve yarım çıkışta uygulanır.
-  En düşük uygun kaldıraç, pozisyon başına yaklaşık varlığın üçte biri teminat
-  bütçesiyle seçilir; 10× yetmezse giriş iptal edilir. Gerçek likidasyon hesabı yoktur;
+  En düşük uygun kaldıraç, pozisyon başına yaklaşık varlığın pozisyon sayısı
+  tavanına bölünmesiyle oluşan teminat bütçesiyle seçilir (şimdi beşte biri);
+  10× yetmezse giriş iptal edilir. Gerçek likidasyon hesabı yoktur;
   yaklaşık likidasyon mesafesine %1 tampon bırakılır.
 - Günlük kilit ertesi gün açılır; ancak yeniden Başlat gerekir. Sayacın sıfırlanması
   tek başına işlem açtırmaz. Mevcut pozisyonlar sırf gece yarısı diye kapanmaz.

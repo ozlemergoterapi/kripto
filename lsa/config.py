@@ -5,12 +5,12 @@ import json
 
 @dataclass(frozen=True)
 class Config:
-    version: str = "0.2.0-paper"
-    initial_balance: float = 100.0
+    version: str = "0.3.0-paper"
+    initial_balance: float = 1000.0
     trade_risk: float = 0.02
     portfolio_risk: float = 0.04
     daily_loss: float = 0.06
-    max_positions: int = 3
+    max_positions: int = 5
     max_leverage: int = 10
     max_symbols: int = 150
     stale_seconds: int = 15
@@ -34,7 +34,7 @@ class Config:
     def __post_init__(self):
         if not (0 < self.trade_risk <= self.portfolio_risk <= self.daily_loss < 1):
             raise ValueError("Invalid risk limits")
-        if self.max_leverage > 10 or self.max_positions > 3:
+        if self.max_leverage > 10 or not 1 <= self.max_positions <= 5:
             raise ValueError("Approved ceilings exceeded")
 
     @property

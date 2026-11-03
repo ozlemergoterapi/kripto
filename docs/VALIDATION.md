@@ -2,6 +2,21 @@
 
 Bu kayıt strateji performans raporu değildir.
 
+## 1.000 USDT / 5 pozisyon için temiz oturum
+
+- Onaylanan yeni varsayılanlar: 1.000 USDT, en fazla 5 eşzamanlı pozisyon;
+  %2 işlem, %4 toplam açık risk ve %6 günlük zarar sınırları değişmedi.
+- Yeni boş günlükte 1.000 bakiye/varlık, sıfır işlem, 5 slot ve 60 USDT günlük
+  sınır doğrulandı. Küçük riskli beş pozisyonun kabulü ve altıncının reddi test edildi.
+- Mevcut günlük bakiyesinin varsayılan değişince sessizce sıfırlanmadığı ve
+  gerçek başlangıç tutarının kayıttan gösterildiği test edildi. Önceki 100-USDT
+  senaryoları regresyon fixture'larında korundu; yeni varsayılanlar ayrı test edildi.
+- Toplam **73 test geçti**; JavaScript sözdizimi kontrolü başarılı.
+- Bulut çalışma kopyasındaki eski `data/` dizini checkout dışına taşınarak
+  yedeklendi ve yeni boş 1.000-USDT günlüğü doğrulandı. Bu işlem kullanıcının
+  Mac'indeki dosyaları değiştirmez. Mac'te temiz başlangıç için yeni ZIP ayrı
+  klasöre açılmalı ve eski `data/` kopyalanmamalıdır.
+
 ## Canlı pozisyon grafiği
 
 - Açık mum görüntü verisi analiz önbelleğinden ayrıldı. Yeni mum/quote ve güncel

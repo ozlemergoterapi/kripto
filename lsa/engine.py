@@ -435,7 +435,7 @@ class Engine:
             return {"mode": "SİMÜLASYON", "live_trading_available": False, "validated_strategy": False,
                     "status": status, "safe_reason": self.safe_reason, "error": self.error,
                     "pending_exit": self.pending_exit, "data_age_seconds": age,
-                    "balance": self.book.balance, "equity": equity,
+                    "balance": self.book.balance, "equity": equity, "initial_balance":self.book.initial_balance,
                     "daily_pnl": equity - self.book.daily_base,
                     "daily_loss_limit": self.book.daily_base * self.config.daily_loss,
                     "daily_locked": self.book.daily_locked, "open_risk": self.book.open_risk(),

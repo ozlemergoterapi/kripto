@@ -51,6 +51,10 @@ class PaperBook:
     def __init__(self, config, saved=None):
         self.config = config
         saved = saved or {}
+        days=saved.get("days",{})
+        legacy_start=(days[sorted(days)[0]]["start_equity"] if days else
+                      saved.get("balance",config.initial_balance) if not saved.get("fills") else config.initial_balance)
+        self.initial_balance=saved.get("initial_balance",legacy_start)
         self.balance = saved.get("balance", config.initial_balance)
         self.positions = {k: Position(**v) for k, v in saved.get("positions", {}).items()}
         self.closed = [Position(**v) for v in saved.get("closed", [])]
@@ -68,7 +72,8 @@ class PaperBook:
         self.market_returns = {s: {int(k): v for k, v in r.items()} for s, r in self.market_returns.items()}
 
     def snapshot(self):
-        return {"balance": self.balance, "positions": {k: asdict(p) for k, p in self.positions.items()},
+        return {"balance": self.balance, "initial_balance":self.initial_balance,
+                "positions": {k: asdict(p) for k, p in self.positions.items()},
                 "closed": [asdict(p) for p in self.closed], "fills": self.fills,
                 "funding_keys": sorted(self.funding_keys), "days": self.days, "day": self.day,
                 "daily_base": self.daily_base, "daily_locked": self.daily_locked,

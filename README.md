@@ -113,6 +113,20 @@ DATA_END olarak kapatılır. Gerçek Binance likidasyon motoru modellenmez.
 Strateji/konfigürasyon hash'i sinyallerde, SQLite'ta ve panelde saklanır.
 Otomatik parametre optimizasyonu veya kendiliğinden kural değişikliği yoktur.
 
+## Yeni temiz simülasyon: 1.000 USDT / en fazla 5 pozisyon
+
+Kullanıcı onayıyla yeni varsayılan başlangıç **1.000 USDT**, eşzamanlı pozisyon
+sınırı **5** oldu. Yeni oturumda işlem başına risk tavanı 20 USDT, toplam açık risk
+tavanı 40 USDT ve günlük zarar tavanı 60 USDT'dir. Pozisyon sınırı beş işlem açma
+zorunluluğu değildir; toplam risk, korelasyon ve minimum miktar kontrolleri sürer.
+
+Sıfırdan başlamak için çalışan botu Ctrl+C ile durdurun. Güncel ZIP'i **ayrı, yeni
+bir klasöre** açın ve Mac-Baslat.command dosyasını çalıştırın. **Eski data klasörünü
+yeni klasöre kopyalamayın.** Yeni klasörde otomatik oluşan boş günlük 1.000 USDT
+ile başlar. Eski klasörü yedek olarak saklayın. Sadece kod güncellemek mevcut
+günlüğün bakiyesini değiştirmez veya geçmiş kayıtlarını silmez; temiz başlangıç
+için boş günlük gerekir. Yeni oturum yine panelde Başlat onayını bekler.
+
 ## Pozisyonlarda USDT tutarları
 
 Açık pozisyonlarda coin adının yanında **Teminat (USDT)** ve **Pozisyon tutarı

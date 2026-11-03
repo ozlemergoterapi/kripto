@@ -12,7 +12,9 @@ NOW = 1793721600.0
 
 @pytest.fixture
 def config():
-    return CONFIG
+    # Retain the original 100-USDT/3-slot regression scenarios. The approved
+    # 1000-USDT/5-slot production defaults are exercised separately.
+    return replace(CONFIG, initial_balance=100.0, max_positions=3)
 
 
 @pytest.fixture
