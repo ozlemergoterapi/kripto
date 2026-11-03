@@ -122,4 +122,4 @@ def test_time_exit_and_istanbul_midnight(book, signal, quote, filters):
 
 def test_approved_ceiling_config_validation(config):
     with pytest.raises(ValueError):
-        replace(config,max_leverage=20)
+        replace(config,max_leverage=0)

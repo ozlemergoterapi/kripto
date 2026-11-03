@@ -164,8 +164,8 @@ class PaperBook:
         if qty / 2 < float(lot.get("minQty", step)) or notional / 2 < minimum:
             return "Kısmi çıkış için minimum tutar/miktar sağlanmıyor"
         leverage = max(1, ceil(notional / (self.last_equity / c.max_positions)))
-        if leverage > c.max_leverage:
-            return "10× kaldıraç tavanı yetersiz"
+        if c.max_leverage is not None and leverage > c.max_leverage:
+            return f"{c.max_leverage}× kaldıraç tavanı yetersiz"
         margin = notional / leverage
         used = sum(p.margin * p.remaining / p.quantity for p in self.positions.values())
         fee = notional * c.fee

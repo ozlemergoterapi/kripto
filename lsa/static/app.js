@@ -26,6 +26,7 @@ function render(s) {
   $("daily-pnl").className = "value " + (s.daily_pnl >= 0 ? "green" : "red");
   $("daily-limit").textContent = `${money(s.daily_loss_limit)} USDT`;
   $("position-count").textContent = s.positions.length;
+  $("leverage-policy").textContent = s.config.max_leverage == null ? "İzole teminat · Uygulama kaldıraç tavanı yok" : `İzole teminat · En fazla ${s.config.max_leverage}×`;
   $("position-limit").textContent = ` / ${s.config.max_positions}`;
   $("initial-balance").textContent = `${money(s.initial_balance)} USDT`;
   $("margin-used").textContent = `Kullanılan teminat: ${money(s.used_margin_usdt)} USDT`;

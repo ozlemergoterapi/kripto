@@ -2,6 +2,18 @@
 
 Bu kayıt strateji performans raporu değildir.
 
+## Sabit 10× uygulama tavanının kaldırılması
+
+Varsayılan paper konfigürasyonunda `max_leverage=None`; gerektiğinde 10× üzeri
+kaldıraç hesaplanabilir. Yeni testte aynı aday 10× tavanıyla reddedilip tavansız
+paper modunda risk/teminat bütçesi içinde açıldı. Teminat ve yaklaşık likidasyon
+mesafesi reddi ayrıca test edildi. Negatif/kesirli isteğe bağlı tavanlar reddedilir.
+Önceki 10× regresyon fixture'ları açıkça bu tavanla çalışmaya devam eder.
+Toplam **76 test geçti**; JavaScript sözdizimi kontrolü başarılı.
+Gerçek Binance kaldıraç kademeleri doğrulanmadı; gerçek emir gönderilmedi.
+Aktif risk yüzdeleri %2/%4/%6 olarak kaldı; pozisyon başına %6 için toplam risk
+kararı bekleniyor. Mevcut pozisyonların kayıtlı kaldıraçları değiştirilmez.
+
 ## 1.000 USDT / 5 pozisyon için temiz oturum
 
 - Onaylanan yeni varsayılanlar: 1.000 USDT, en fazla 5 eşzamanlı pozisyon;

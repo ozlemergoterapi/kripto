@@ -5,13 +5,13 @@ import json
 
 @dataclass(frozen=True)
 class Config:
-    version: str = "0.3.0-paper"
+    version: str = "0.3.1-paper"
     initial_balance: float = 1000.0
     trade_risk: float = 0.02
     portfolio_risk: float = 0.04
     daily_loss: float = 0.06
     max_positions: int = 5
-    max_leverage: int = 10
+    max_leverage: int | None = None  # None: no application-level cap in PAPER mode.
     max_symbols: int = 150
     stale_seconds: int = 15
     scan_seconds: int = 300
@@ -34,7 +34,9 @@ class Config:
     def __post_init__(self):
         if not (0 < self.trade_risk <= self.portfolio_risk <= self.daily_loss < 1):
             raise ValueError("Invalid risk limits")
-        if self.max_leverage > 10 or not 1 <= self.max_positions <= 5:
+        if self.max_leverage is not None and (type(self.max_leverage) is not int or self.max_leverage < 1):
+            raise ValueError("Leverage cap must be a positive integer or None")
+        if not 1 <= self.max_positions <= 5:
             raise ValueError("Approved ceilings exceeded")
 
     @property

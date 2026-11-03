@@ -162,6 +162,21 @@ Bayrak/flama, üçgen/kama, ikili/üçlü tepe-dip, OBO/TOBO, çanak ve fincan-k
 kırılım doğrulaması bu karşılaştırmanın kapsamında değildir. Modül sadece
 açıklamadır; mevcut strateji, puanlama ve risk kurallarını etkilemez.
 
+## Simülasyonda dinamik kaldıraç
+
+Kullanıcı talebiyle sabit 10× uygulama tavanı kaldırıldı (`max_leverage=None`).
+Model, miktar ve pozisyon başına teminat bütçesine göre en düşük uygun tam sayı
+kaldıracı seçer. Teminat, maliyet, risk bütçesi ve yaklaşık likidasyon-mesafesi
+kontrolleri devam eder; yüksek kaldıraç her adayın kabul edileceği anlamına gelmez.
+Binance'in gerçek coin/pozisyon büyüklüğü limitleri sınırsız değildir. Bu sürüm
+paper-only olduğundan bu limitler henüz doğrulanmaz; 10× üzerindeki simülasyon
+işlemi Binance'te gerçekleştirilebilirlik kanıtı değildir. Kaldıraç artışı stopta
+hedeflenen USDT riskini otomatik artırmaz; miktar hâlâ risk bütçesinden hesaplanır.
+
+Aktif sınırlar işlem başına %2, toplam açık %4 ve günlük %6'dır. Kullanıcının
+pozisyon başına %6 talebi, toplam/günlük limitlerle birlikte henüz netleşmediği
+için bu güncellemeye uygulanmadı.
+
 ## Açık pozisyonun canlı grafiği
 
 Pozisyon satırında **Canlı grafik** düğmesi vardır. Grafik panelindeki **Canlı

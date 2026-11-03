@@ -10,7 +10,10 @@ Durum: Kullanıcının bu görüşmede onayladığı kapsam için simülasyon ge
 - Binance USDⓈ-M; USDT teminatlı PERPETUAL. LONG ve SHORT.
 - Kullanıcının yeni onayıyla temiz simülasyon başlangıcı 1.000 USDT;
   tek işlem azami %2, toplam açık risk azami %4.
-- En fazla 5 eşzamanlı pozisyon; azami 10×; yalnızca izole teminat modeli.
+- En fazla 5 eşzamanlı pozisyon; kullanıcının son talebiyle simülasyondaki
+  sabit 10× uygulama tavanı kaldırıldı. Kaldıraç teminat bütçesine göre dinamik;
+  yalnızca izole teminat modeli. Binance'in coin/pozisyon bazlı gerçek tavanları
+  sınırsız değildir ve bu paper modelinde henüz doğrulanmamaktadır.
 - Gün başı varlığına göre günlük %6 kayıpta tüm pozisyonlardan çıkış ve yeni giriş kilidi.
   Açık P&L ve maliyetler dahildir. Ani fiyat hareketlerinde sınır aşılabilir.
 - Türkiye saatiyle 00.00 yeni günlük baz; günlük ve haftalık kayıtlar.
@@ -57,7 +60,7 @@ Canlı emir verme izni veya kanıtlanmış strateji anlamına gelmez.
   Borsa LOT_SIZE ve MIN_NOTIONAL filtreleri giriş ve yarım çıkışta uygulanır.
   En düşük uygun kaldıraç, pozisyon başına yaklaşık varlığın pozisyon sayısı
   tavanına bölünmesiyle oluşan teminat bütçesiyle seçilir (şimdi beşte biri);
-  10× yetmezse giriş iptal edilir. Gerçek likidasyon hesabı yoktur;
+  uygulama tavanı ayrıca tanımlanmışsa o tavan aşılmaz. Gerçek likidasyon hesabı yoktur;
   yaklaşık likidasyon mesafesine %1 tampon bırakılır.
 - Günlük kilit ertesi gün açılır; ancak yeniden Başlat gerekir. Sayacın sıfırlanması
   tek başına işlem açtırmaz. Mevcut pozisyonlar sırf gece yarısı diye kapanmaz.
