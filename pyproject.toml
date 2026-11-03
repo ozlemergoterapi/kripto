@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lsa-trader"
+version = "0.1.0"
+description = "Binance USD-M public data paper trading and risk dashboard"
+requires-python = ">=3.12"
+dependencies = ["pyarrow==21.0.0"]
+
+[project.optional-dependencies]
+test = ["pytest==8.4.2"]
+
+[project.scripts]
+lsa = "lsa.__main__:main"
+
+[tool.setuptools.package-data]
+lsa = ["static/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
