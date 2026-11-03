@@ -123,3 +123,27 @@ TP1 sonrası kalan teminat ve tutar azalır; ilk giriş rakamları alt satırda 
 Komisyonlar teminat sütununa dahil değildir. Toplam kullanılan teminat üst kartta,
 ilk giriş teminatı ve tutarı kapanan işlemler tablosunda da görünür. Bu alanlar
 mevcut kayıtlardan hesaplanır; veritabanı sıfırlaması veya strateji değişikliği yoktur.
+
+## Giriş grafiği ve formasyon benzerliği
+
+Yeni simülasyon pozisyonu açılırken giriş zaman aralığının son 120 kapanmış mumu,
+giriş anının alış/satış fiyatı, ilk giriş/stop/TP seviyeleri ve kullanılan tutarlar
+SQLite'a pozisyon günlüğüyle aynı işlemde kaydedilir. **Giriş grafiği** düğmesi
+açık ve kapanmış işlemlerde bu kaydı açar. **Yeni girişte grafiği göster** seçeneği
+varsayılan olarak açıktır. Bu görünüm canlı grafik değildir; sonraki mumlar veya
+TP1 sonrası taşınan stop giriş anının kaydını değiştirmez. Eski sürümde açılmış
+işlemler için geçmişe dönük giriş grafiği uydurulmaz; kaydın olmadığı belirtilir.
+
+Grafikte mumlar, hacim, ilk giriş/stop/TP seviyeleri ve isteğe bağlı şablon izdüşümü
+gösterilir. Yanında en yakın klasik formasyonun şeması ve iki alternatif bulunur.
+Karşılaştırma, kapanış fiyatlarının normalize edilmiş şekliyle **17 şablon**
+arasında yapılır; son 24/40/60/90/120 mumdan en yakın pencere seçilir. Bu,
+fotoğraflarla eğitilmiş bir model veya doğrulanmış formasyon tespiti değildir.
+0–100 benzerlik puanı kazanma olasılığı değildir. Zayıf ve yakın sonuçlar ayrıca
+etiketlenir; düz/yetersiz veride eşleşme zorlanmaz. Sarı izdüşüm gerçek destek veya
+direnç çizgisi değildir. İşlem yönü ve hedefler bu şablonlardan çıkarılmaz.
+
+Bayrak/flama, üçgen/kama, ikili/üçlü tepe-dip, OBO/TOBO, çanak ve fincan-kulp
+şablonları vardır. Harmonik Fibonacci oranları, tekil mum formasyonları, hacimle
+kırılım doğrulaması bu karşılaştırmanın kapsamında değildir. Modül sadece
+açıklamadır; mevcut strateji, puanlama ve risk kurallarını etkilemez.

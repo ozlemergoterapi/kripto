@@ -2,6 +2,20 @@
 
 Bu kayıt strateji performans raporu değildir.
 
+## Giriş grafikleri ve açıklayıcı şablon karşılaştırması
+
+- Toplam **62 test geçti**. 17 formasyon için sentetik şablon, fiyat ölçeği
+  değişmezliği, düz/yetersiz veri, işlemle atomik kayıt, SQL rollback ve HTTP
+  grafik erişimi test edildi. Stop değişimi, yeni mumlar, yeniden açılış ve
+  kapanış sonrası giriş kaydının değişmediği doğrulandı.
+- Chromium'da ayrı geçici veritabanındaki sentetik bir pozisyonla otomatik
+  açılış, 120 mum ve hacim çubukları, şablon izdüşümü, kapat/yeniden aç, eski
+  işlem için kayıt-yok mesajı ve masaüstü/mobil taşma kontrol edildi.
+  JavaScript exception görülmedi. Kullanıcının `data/` günlüğüne test eklenmedi.
+- Benzerlik puanları normalize şekil mesafesidir; istatistiksel güven veya
+  formasyon başarısı ölçülmedi. Referanslarda gösterilen gelecek hedef okları
+  eşleştirmeye alınmaz. Formasyon modülü stratejiyi değiştirmez.
+
 ## Pozisyon tutarı gösterimi
 
 Açık pozisyonlarda ilk/kalan teminat ve giriş fiyatıyla ilk/kalan pozisyon

@@ -14,6 +14,7 @@ class Store:
                 CREATE TABLE IF NOT EXISTS signals (id TEXT PRIMARY KEY, body TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY, at REAL, level TEXT, message TEXT);
                 CREATE TABLE IF NOT EXISTS versions (hash TEXT PRIMARY KEY, body TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS entry_charts (id TEXT PRIMARY KEY, body TEXT NOT NULL);
             """)
 
     def connect(self):
@@ -24,12 +25,26 @@ class Store:
             row = db.execute("SELECT body FROM state WHERE id=1").fetchone()
             return json.loads(row[0]) if row else None
 
-    def save(self, book, signals=()):
+    def save(self, book, signals=(), entry_charts=()):
         # Ledger and signals are committed atomically; retries cannot duplicate fills.
         with self.connect() as db:
             db.execute("INSERT OR REPLACE INTO state VALUES (1, ?)", (json.dumps(book.snapshot(), allow_nan=False),))
             db.executemany("INSERT OR IGNORE INTO signals VALUES (?, ?)",
                            [(s.id, json.dumps(s.record(), allow_nan=False)) for s in signals])
+            db.executemany("INSERT OR IGNORE INTO entry_charts VALUES (?, ?)",
+                           [(c["id"], json.dumps(c, allow_nan=False)) for c in entry_charts])
+
+    def entry_chart(self, id):
+        with self.connect() as db:
+            row = db.execute("SELECT body FROM entry_charts WHERE id=?", (id,)).fetchone()
+            return json.loads(row[0]) if row else None
+
+    def entry_chart_ids(self, ids):
+        if not ids:
+            return set()
+        with self.connect() as db:
+            placeholders = ",".join("?" for _ in ids)
+            return {row[0] for row in db.execute(f"SELECT id FROM entry_charts WHERE id IN ({placeholders})", ids)}
 
     def signal_exists(self, id):
         with self.connect() as db:

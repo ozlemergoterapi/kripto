@@ -1,5 +1,6 @@
 import json
 import secrets
+import re
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -31,9 +32,16 @@ def make_server(engine, host="127.0.0.1", port=8765):
                 self.reply(200, {"token": token})
             elif self.path == "/health":
                 self.reply(200, {"service": "ok", "mode": "paper", "strategy_validated": False})
-            elif self.path in ("/", "/app.js", "/style.css"):
+            elif self.path.startswith("/api/entry-chart/"):
+                id = self.path[len("/api/entry-chart/"):]
+                if not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", id):
+                    self.reply(400, {"error":"Geçersiz grafik kimliği"})
+                    return
+                chart = engine.store.entry_chart(id)
+                self.reply(200 if chart else 404, chart or {"error":"Bu pozisyonun giriş anı grafiği kaydedilmemiş. Geçmişe dönük grafik üretilmez."})
+            elif self.path in ("/", "/app.js", "/charts.js", "/style.css"):
                 name = "index.html" if self.path == "/" else self.path[1:]
-                mime = {"index.html": "text/html", "app.js": "text/javascript", "style.css": "text/css"}[name]
+                mime = {"index.html": "text/html", "app.js": "text/javascript", "charts.js":"text/javascript", "style.css": "text/css"}[name]
                 self.reply(200, (STATIC / name).read_bytes(), mime + "; charset=utf-8")
             else:
                 self.reply(404, {"error": "Bulunamadı"})

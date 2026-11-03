@@ -9,6 +9,7 @@ from .market import INTERVAL_MS
 from .reporting import metrics, reports
 from .risk import PaperBook
 from .strategy import analyze
+from .charts import entry_snapshot
 
 log = logging.getLogger(__name__)
 
@@ -40,6 +41,7 @@ class Engine:
         self.dirty_symbols = set()
         self.pending_signals = {}
         self.entered_ids = {f["signal_id"] for f in self.book.fills if f["reason"] == "ENTRY"}
+        self.chart_queue = []
         from .stream import ClosedCandleStreams
         self.streams = ClosedCandleStreams(self)
         self.event("INFO", "SİMÜLASYON açıldı; gerçek emir özelliği bulunmuyor. Başlat onayı bekleniyor.")
@@ -47,6 +49,10 @@ class Engine:
     def event(self, level, message):
         log.info("%s: %s", level, message)
         self.store.event(time.time(), level, message)
+
+    def _save(self, signals=()):
+        self.store.save(self.book, signals=signals, entry_charts=self.chart_queue)
+        self.chart_queue.clear()
 
     def start_workers(self):
         self.streams.start()
@@ -59,7 +65,7 @@ class Engine:
         self.stop_event.set()
         with self.lock:
             self.running = False
-            self.store.save(self.book)
+            self._save()
         for thread in self.threads + self.streams.threads:
             thread.join(timeout=8)
 
@@ -81,7 +87,7 @@ class Engine:
                 self.safe_reason = "Acil durdurma — açık pozisyonların çıkışı bekleniyor"
                 self.book.manage(self.quotes, now, "EMERGENCY")
                 self.pending_exit = bool(self.book.positions)
-                self.store.save(self.book)
+                self._save()
                 self.event("WARN", "Acil durdurma uygulandı; eski fiyattan çıkış yapılmadı.")
             else:
                 return False, "Bilinmeyen komut"
@@ -105,7 +111,7 @@ class Engine:
                 self._trip("SAFE_MODE: güncel fiyat eksik; çıkış için geçerli veri bekleniyor")
                 self.book.manage(good, now, "DATA_LOSS")
                 self.pending_exit = bool(self.book.positions)
-                self.store.save(self.book)
+                self._save()
                 return
             # Global feed health follows the newest verified exchange event.
             # An unrelated illiquid symbol must not age the entire feed.
@@ -124,7 +130,7 @@ class Engine:
                 self.book.enforce_daily(good, now)
                 self.safe_reason = "" if not self.pending_exit else "Çıkış bekleniyor"
                 self._evaluate_pending(now)
-            self.store.save(self.book)
+            self._save()
 
     def cache_snapshot(self, symbol, frames):
         """Merge REST warmup with any newer stream candles received during download."""
@@ -177,7 +183,7 @@ class Engine:
                                                    "revision": revision}
                 self.latest_candidates = [c for c in self.latest_candidates if c["symbol"] != symbol]
                 self.latest_candidates.append(signal.record())
-                self.store.save(self.book, [signal])
+                self._save(signals=[signal])
                 self.event("INFO", f"{symbol} {signal.side}: giriş adayı canlı fiyat takibine alındı.")
             else:
                 self.pending_signals[signal.id]["revision"] = revision
@@ -222,6 +228,12 @@ class Engine:
             item["attempted_at"] = q.observed_at
             reason = self.book.open(signal, q, now, self.universe[signal.symbol]["filters"], item["returns"])
             if reason is None:
+                position = self.book.positions[signal.symbol]
+                try:
+                    self.chart_queue.append(entry_snapshot(position, signal, frames, q, now))
+                except Exception:
+                    log.exception("Entry chart capture failed: %s", id)
+                    self.event("ERROR", f"{signal.symbol}: giriş grafiği kaydedilemedi; pozisyon risk yönetimi sürüyor.")
                 self.entered_ids.add(id)
                 del self.pending_signals[id]
                 self.book.enforce_daily(self.quotes, now)
@@ -241,7 +253,7 @@ class Engine:
                           if stale_positions else "15 saniyedir güncel veri yok")
                 self._trip("SAFE_MODE: " + reason + "; " +
                            ("pozisyon çıkışı bekleniyor" if self.book.positions else "yeni girişler durduruldu"))
-                self.store.save(self.book)
+                self._save()
 
     def _watchdog_loop(self):
         while not self.stop_event.wait(1):
@@ -263,7 +275,7 @@ class Engine:
                         raise MarketError("Funding mark fiyatı eksik")
                     self.book.apply_funding(symbol, int(row["fundingTime"]) / 1000,
                                             float(row["fundingRate"]), mark, now)
-                self.store.save(self.book)
+                self._save()
         self.funding_checked_at = now
 
     def _quotes_loop(self):
@@ -378,6 +390,8 @@ class Engine:
             age = now - self.last_data if self.last_data else None
             status = "SAFE_MODE" if self.safe_reason or age is None or age > self.config.stale_seconds else ("RUNNING" if self.running else "PAUSED")
             equity = self.book.last_equity
+            chart_ids = self.store.entry_chart_ids([p.id for p in self.book.positions.values()] +
+                                                   [p.id for p in self.book.closed[-100:]])
             return {"mode": "SİMÜLASYON", "live_trading_available": False, "validated_strategy": False,
                     "status": status, "safe_reason": self.safe_reason, "error": self.error,
                     "pending_exit": self.pending_exit, "data_age_seconds": age,
@@ -388,11 +402,13 @@ class Engine:
                     "used_margin_usdt": sum(p.capital_summary()["used_margin_usdt"] for p in self.book.positions.values()),
                     "rate": self.rate, "rate_error": self.rate_error,
                     "rate_stale": not self.rate or now - self.rate["at"] > 180,
-                    "positions": [asdict(p) | p.capital_summary() | {"quote": asdict(q) if (q := self.quotes.get(p.symbol)) else None,
+                    "positions": [asdict(p) | p.capital_summary() | {"chart_available": p.id in chart_ids,
+                                               "quote": asdict(q) if (q := self.quotes.get(p.symbol)) else None,
                                                "net_if_closed": (p.net + p.direction * (self.book.exit_price(p, q) - p.entry) * p.remaining
                                                                  - self.book.exit_price(p, q) * p.remaining * self.config.fee) if q else None}
                                   for p in self.book.positions.values()],
-                    "closed": [asdict(p) | p.capital_summary() for p in reversed(self.book.closed[-100:])],
+                    "closed": [asdict(p) | p.capital_summary() | {"chart_available": p.id in chart_ids}
+                               for p in reversed(self.book.closed[-100:])],
                     "metrics": metrics(self.book.closed, self.book.max_drawdown),
                     "reports": reports(self.book), "scan": dict(self.scan),
                     "universe_size": len(self.universe),
