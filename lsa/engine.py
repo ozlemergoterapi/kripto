@@ -98,7 +98,10 @@ class Engine:
                 self.pending_exit = bool(self.book.positions)
                 self.store.save(self.book)
                 return
-            self.last_data = min(q.observed_at for q in good.values())
+            # Global feed health follows the newest verified exchange event.
+            # An unrelated illiquid symbol must not age the entire feed.
+            # Position prices are still checked independently below / by watchdog.
+            self.last_data = max(q.observed_at for q in good.values())
             if self.pending_exit:
                 self.book.manage(good, now, "SAFETY_EXIT")
                 self.pending_exit = bool(self.book.positions)
@@ -117,8 +120,12 @@ class Engine:
         with self.lock:
             if not self.last_data and now - self.started_at < self.config.stale_seconds:
                 return
-            if now - self.last_data >= self.config.stale_seconds:
-                self._trip("SAFE_MODE: 15 saniyedir güncel veri yok; " +
+            stale_positions = [s for s in self.book.positions if s not in self.quotes or
+                               now - self.quotes[s].observed_at >= self.config.stale_seconds]
+            if now - self.last_data >= self.config.stale_seconds or stale_positions:
+                reason = ("pozisyon fiyatı güncel değil: " + ", ".join(stale_positions)
+                          if stale_positions else "15 saniyedir güncel veri yok")
+                self._trip("SAFE_MODE: " + reason + "; " +
                            ("pozisyon çıkışı bekleniyor" if self.book.positions else "yeni girişler durduruldu"))
                 self.store.save(self.book)
 

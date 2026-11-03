@@ -2,6 +2,16 @@
 
 Bu kayıt strateji performans raporu değildir.
 
+## Sonraki düzeltme: veri yaşı
+
+Mac'te kur ve coin taraması çalışırken en eski coin fiyatının global veri yaşına
+atanması yanlış SAFE_MODE tetikleyebiliyordu. Global veri yaşı artık en yeni
+geçerli borsa olayını kullanır. Açık pozisyonların her birinin fiyatı watchdog
+tarafından ayrıca kontrol edilir; 15 saniye sınırı değişmedi. HTTP yanıtının
+gelmesi eski borsa verisini güncel saydırmaz. Bu üç senaryo için regresyon
+testleri eklendi; toplam **29 test geçti**. Bu düzeltmenin kullanıcının Mac'inde
+canlı uçtan uca doğrulaması henüz yapılmadı.
+
 ## Çalıştırılan kontroller
 
 - Python 3.12.14; sabit sürümlü gereksinimlerin kurulumu ve tekrar kurulumu başarılı.

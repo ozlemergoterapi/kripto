@@ -66,3 +66,33 @@ def test_http_state_security_and_controls(tmp_path,config):
         server.shutdown()
         server.server_close()
         thread.join()
+
+
+def test_unrelated_old_symbol_does_not_trip_fresh_feed(tmp_path,config,quote):
+    e = Engine(config,Store(tmp_path/"journal.sqlite"))
+    e.ingest({quote.symbol:quote,"OTHERUSDT":replace(quote,symbol="OTHERUSDT",observed_at=NOW-14.9)},NOW)
+    e.running = True
+    e.check_stale(NOW+1)
+    assert e.last_data == NOW
+    assert e.running
+    assert not e.safe_reason
+
+
+def test_fresh_other_symbol_does_not_hide_stale_position(tmp_path,config,signal,quote,filters):
+    e = Engine(config,Store(tmp_path/"journal.sqlite"))
+    e.ingest({quote.symbol:quote},NOW)
+    assert e.book.open(signal,quote,NOW,filters,{}) is None
+    e.running = True
+    e.ingest({quote.symbol:quote,"OTHERUSDT":replace(quote,symbol="OTHERUSDT",observed_at=NOW+14)},NOW+14)
+    assert e.last_data == NOW+14
+    e.check_stale(NOW+15)
+    assert not e.running
+    assert e.pending_exit
+    assert quote.symbol in e.book.positions
+
+
+def test_old_prices_cannot_be_refreshed_by_receipt_time(tmp_path,config,quote):
+    e = Engine(config,Store(tmp_path/"journal.sqlite"))
+    e.ingest({quote.symbol:quote},NOW+20)
+    assert e.last_data == 0
+    assert e.safe_reason
